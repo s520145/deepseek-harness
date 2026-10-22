@@ -165,7 +165,7 @@ Generated from source by `scripts/gen-cordis-catalog.ts` (verified fresh by `pnp
 
 ### `ctx.sessionTitle` — `SessionTitleService`
 
-Log-backed title fold plus asynchronous fallback generation.
+Log-backed title fold, local fallback publication, and asynchronous providers.
 
 ```ts cordis-catalog
 /**

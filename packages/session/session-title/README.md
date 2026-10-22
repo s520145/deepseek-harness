@@ -31,6 +31,8 @@ Mount the service to give sessions titles that clients can display and that neve
 
 Titles come from three sources, newest wins. The built-in fallback derives from the first eligible human message's leading words within the configured caps; a registered provider generates a title over eligible messages; an explicit `rename()` accepts a user-supplied title. Only text blocks from human `user/message` events are eligible, and empty or non-text prompts wait for later eligible input. A user-sourced latest title pins the session — later user messages schedule no automatic revision, and an explicit `refresh()` remains the deliberate unpin.
 
+An active step publishes its automatic fallback at the marked main request's `llm/stream` entry, after the request header and context are logged. Pending title-provider work starts there too. A step that ends before dispatch discards that pending provider work and queues the fallback. Without an active step, fallback creation remains asynchronous.
+
 ### Minimal configuration
 
 All limits are required; the library supplies no defaults. Mount the service with the three bounds:

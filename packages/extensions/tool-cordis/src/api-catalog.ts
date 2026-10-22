@@ -2611,8 +2611,8 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
   },
   {
     key: 'sessionTitle',
-    summary: 'Log-backed title fold plus asynchronous fallback generation.',
-    description: 'Log-backed title fold plus asynchronous fallback generation.',
+    summary: 'Log-backed title fold, local fallback publication, and asynchronous providers.',
+    description: 'Log-backed title fold, local fallback publication, and asynchronous providers.',
     methods: [
       {
         signature: 'get(session: Session): SessionTitleSnapshot | undefined',

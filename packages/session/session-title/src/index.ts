@@ -297,7 +297,7 @@ export function foldSessionTitle(events: readonly SessionEvent[]): SessionTitleS
   })
 }
 
-/** Log-backed title fold plus asynchronous fallback generation. */
+/** Log-backed title fold, local fallback publication, and asynchronous providers. */
 export class SessionTitleService extends Service {
   static inject = ['sessions', 'sessionProjections']
   static Config: z<Config> = z.object({
@@ -366,6 +366,9 @@ export class SessionTitleService extends Service {
           break
         case 'request/header':
           this.onRequestHeader(session, event)
+          break
+        case 'step/end':
+          this.onStepEnd(session)
           break
         default:
           break
@@ -519,6 +522,20 @@ export class SessionTitleService extends Service {
         state.pending = { registration, revision, throughSeq: event.seq }
       }
     }
+    if (this.hasActiveStep(session)) return
+    this.deferFallback(session)
+  }
+
+  /** Complete fallback-only work when a step ends before dispatching its main request. */
+  private onStepEnd(session: Session): void {
+    if (!this.serviceActive()) return
+    const state = this.work.get(session)
+    if (state !== undefined) delete state.pending
+    if (this.get(session) === undefined && this.titleInputOf(session).first !== null) this.deferFallback(session)
+  }
+
+  /** Queue standalone or ended-step fallback work without delaying a caller. */
+  private deferFallback(session: Session): void {
     this.defer(async () => {
       try {
         await this.ensureFallback(session)
@@ -529,9 +546,9 @@ export class SessionTitleService extends Service {
     })
   }
 
-  /** Start pending automatic work only after its exact main-request route is logged. */
+  /** Start standalone automatic work after its exact main-request route is logged. */
   private onRequestHeader(session: Session, event: Extract<SessionEvent, { type: 'request/header' }>): void {
-    if (!this.serviceActive()) return
+    if (!this.serviceActive() || this.hasActiveStep(session)) return
     const state = this.work.get(session)
     const pending = state?.pending
     if (state === undefined || pending === undefined || pending.throughSeq >= event.seq) return
@@ -542,19 +559,31 @@ export class SessionTitleService extends Service {
     this.startPending(session, state, pending, route)
   }
 
-  /** Start unchanged-route work from the marked loop request after its header fold is current. */
+  /** Publish fallback and start title generation for a matching active main request. */
   private onMainRequest(options: GenerateOptions): void {
     if (!this.serviceActive() || options.sessionId === undefined || !isAgentLoopRequest(options)) return
     const session = this.ctx.sessions.get(options.sessionId)
-    const state = session === undefined ? undefined : this.work.get(session)
-    const pending = state?.pending
-    if (session === undefined || state === undefined || pending === undefined) return
+    if (session === undefined) return
     const boundary = this.ctx.sessionProjections.stateOf(session, 'turnBoundary')?.lastStepBoundary
     const route = session.requestHeader()?.config
     if (boundary?.kind !== 'start'
       || route?.provider !== options.provider
       || route.model !== options.model) return
+    try {
+      this.commitInitialFallback(session)
+    } catch (error: unknown) {
+      this.ctx.logger.warn(`session "${session.id}": fallback title update failed: ${String(error)}`)
+      return
+    }
+    const state = this.work.get(session)
+    const pending = state?.pending
+    if (state === undefined || pending === undefined) return
     this.startPending(session, state, pending, { provider: options.provider, model: options.model })
+  }
+
+  /** Whether admitted input still belongs to an unfinished loop step. */
+  private hasActiveStep(session: Session): boolean {
+    return this.ctx.sessionProjections.stateOf(session, 'turnBoundary')?.lastStepBoundary?.kind === 'start'
   }
 
   /** Consume one pending revision and schedule its non-blocking provider call. */
@@ -820,26 +849,27 @@ export class SessionTitleService extends Service {
     if (title.length === 0) return undefined
     const state = this.stateFor(session)
     if (state.fallback !== undefined) return state.fallback
-    const fallback = Promise.resolve().then(() => {
-      this.assertServiceActive()
-      if (this.ctx.sessions.get(session.id) !== session) {
-        throw new Error(`session "${session.id}" is not live in this store`)
-      }
-      const accepted = this.get(session)
-      if (accepted !== undefined) return accepted
-      session.append('session/title', {
-        title,
-        messageSeqs: [first.seq],
-        source: { kind: 'fallback' },
-      })
-      return this.get(session)
-    })
+    const fallback = Promise.resolve().then(() => this.commitInitialFallback(session))
     state.fallback = fallback
     try {
       return await fallback
     } finally {
       delete state.fallback
     }
+  }
+
+  /** Publish the local fallback at an explicit lifecycle point; accepted titles win. */
+  private commitInitialFallback(session: Session): SessionTitleSnapshot | undefined {
+    this.assertServiceActive()
+    const accepted = this.get(session)
+    if (accepted !== undefined) return accepted
+    const first = this.titleInputOf(session).first
+    if (first === null) return undefined
+    if (this.ctx.sessions.get(session.id) !== session) {
+      throw new Error(`session "${session.id}" is not live in this store`)
+    }
+    this.appendFallback(session, first)
+    return this.get(session)
   }
 }
 

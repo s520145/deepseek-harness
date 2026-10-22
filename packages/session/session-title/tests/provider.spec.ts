@@ -474,6 +474,9 @@ describe('SessionTitleService Provider lifecycle', () => {
     const first = appendHumanPrompt(session, 'First routed prompt')
     await settle()
     appendRoute(session)
+    void ctx.llm.stream(markAgentLoopRequest(deepFreeze({
+      provider: 'main-route', model: 'chat-model', messages: session.deriveMessages(), sessionId: session.id,
+    })))
     await settle()
     session.append('step/end', { turn: 1, step: 1 })
     session.append('turn/end', { turn: 1, reason: { kind: 'completed' } })
