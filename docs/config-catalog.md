@@ -2330,6 +2330,23 @@ export interface Config {
 ```
 <!-- END GENERATED config-catalog:@deepseek-ai/dsh-office-to-pdf -->
 
+<!-- BEGIN GENERATED config-catalog:@deepseek-ai/dsh-output-continuation -->
+<a id="deepseek-aidsh-output-continuation"></a>
+
+## `@deepseek-ai/dsh-output-continuation`
+
+- `inject`: `agents` · `tools` · `sessionProjections`
+- `source`: [`packages/guard/output-continuation/src/index.ts:14`](../packages/guard/output-continuation/src/index.ts)
+
+```ts config-catalog
+/** Same-turn automatic output-limit budget. Zero disables continuation and its tool guard. */
+export interface Config {
+  /** Integer from 0 through 10; default 2. Tool successes do not replenish it. */
+  maxContinuations?: number
+}
+```
+<!-- END GENERATED config-catalog:@deepseek-ai/dsh-output-continuation -->
+
 <!-- BEGIN GENERATED config-catalog:@deepseek-ai/dsh-permission-presets -->
 <a id="deepseek-aidsh-permission-presets"></a>
 

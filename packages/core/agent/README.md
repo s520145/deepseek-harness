@@ -82,7 +82,9 @@ The package is built on one separation: the public `Agent` surface and registry 
 
 ### Step admission
 
-`PreStepDecision` is either `{ kind: 'reject' }` or `{ kind: 'enter', messages, startsRequestSeries? }`. The enter branch contains the complete identified, frozen message batch. Acceptance does not commit it: after assembly and `step/start`, `agent/request` and `prepareCall()` resolve the route before the loop commits the system prompt and user batch. Cancellation during either async phase commits neither. `startsRequestSeries: true` declares a distinct model-message series; a wrapping listener preserves that declaration and the batch unless it intentionally replaces either one. Claiming removes offered messages from the inbox, while messages inserted after the claim remain pending for a later boundary.
+`PreStepDecision` is either `{ kind: 'reject' }` or `{ kind: 'enter', messages, startsRequestSeries?, resumesAfterMaxTokens? }`. The enter branch contains the complete identified, frozen message batch. Acceptance does not commit it: after assembly and `step/start`, `agent/request` and `prepareCall()` resolve the route before the loop commits the system prompt and user batch. Cancellation during either async phase commits neither. `startsRequestSeries: true` declares a distinct model-message series; a wrapping listener preserves that declaration and the batch unless it intentionally replaces either one. Claiming removes offered messages from the inbox, while messages inserted after the claim remain pending for a later boundary.
+
+`resumesAfterMaxTokens` names the latest truncated Assistant event in the same turn. A listener declares it only while admitting its recovery messages; the [default driver](../agent-loop/README.md#understand-the-implementation) preserves the original stream and resolves the sticky output-limit outcome after successful recovery.
 
 ### Durable inbox
 

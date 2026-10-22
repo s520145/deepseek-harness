@@ -444,6 +444,12 @@
     - id: tool-goal
       name: '@deepseek-ai/dsh-tool-goal'
 
+    # Bounded recovery after output truncation; exact repeated tools are denied.
+    - id: output-continuation
+      name: '@deepseek-ai/dsh-output-continuation'
+      config:
+        maxContinuations: 2
+
     # Consecutive-repeat reminders on the tool chain.
     - id: repeat-tool-reminder
       name: '@deepseek-ai/dsh-repeat-tool-reminder'

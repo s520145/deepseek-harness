@@ -127,6 +127,12 @@ interface SdkAssertions {
 }
 
 const SDK_ASSERTIONS: Readonly<Record<string, SdkAssertions>> = {
+  'output-continuation': {
+    expectedFinalResponse: 'OUTPUT_CONTINUATION_OK',
+  },
+  'max-tokens-continue': {
+    patches: [fileURLToPath(new URL('./max-tokens-continue/runtime.cordis.yml', import.meta.url))],
+  },
   'minimal-image-compaction': {
     expectedFinalResponse: 'MINIMAL_IMAGE_OK',
     expectedTools: { bash: ['command'], read_image: ['file_path'], working_directory: [] },
@@ -1036,6 +1042,22 @@ describe('TypeScript SDK snapshots over the jsonrpc runtime', () => {
         expect(events.filter(event => event.type === 'tool/result').at(-1)).toMatchObject({ data: { message: {
           toolCallId: 'call_dynamic_ping', isError: false, content: [{ type: 'text', text: 'pong' }],
         } } })
+      }
+      if (scenario.name === 'output-continuation') {
+        expect(results).toHaveLength(1)
+        const events = results.flatMap(result => result.events)
+        const users = events.filter(event => event.type === 'user/message')
+        expect(users.filter(event => (event.data['source'] as { kind: string }).kind === 'output-continuation')
+          .map(event => event.data['source']), JSON.stringify(events.filter(event => event.type === 'turn/end')))
+          .toMatchObject([
+          { kind: 'output-continuation', turn: 1, attempt: 1 },
+          { kind: 'output-continuation', turn: 1, attempt: 2 },
+        ])
+        const finishes = events.filter(event => event.type === 'assistant/message').map((event) => {
+          const stream = event.data['stream'] as Array<{ type: string; chunk?: { type: string; reason?: { kind: string } } }>
+          return stream.findLast(record => record.type === 'chunk' && record.chunk?.type === 'finish')?.chunk?.reason?.kind
+        })
+        expect(finishes).toEqual(['max-tokens', 'max-tokens', 'stop'])
       }
       if (scenario.name === 'tool-scheduler-recovery') {
         expect(results).toHaveLength(2)

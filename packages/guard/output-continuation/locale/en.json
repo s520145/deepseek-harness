@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Output Continuation",
+    "description": "Continue bounded output-limit turns while blocking exact repeated tool operations."
+  }
+}

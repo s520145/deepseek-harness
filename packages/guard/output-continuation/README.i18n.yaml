@@ -1,0 +1,67 @@
+# Bilingual-pair consistency record for README.md (docs/i18n/README.md): per heading
+# section, a hash of its English and Chinese blocks outside code blocks and generated regions.
+# After editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write packages/guard/output-continuation/README.md
+/:
+  en: d0447853f2e70fd0
+  zh: 91f55f6f67fd5185
+/deepseek-ai-dsh-output-continuation:
+  en: 61148ea54a2cc556
+  zh: ea7c566a38394b01
+/deepseek-ai-dsh-output-continuation/summary:
+  en: 2fea652f28ca0dd3
+  zh: 1dc59300f957af63
+/deepseek-ai-dsh-output-continuation/table-of-contents:
+  en: 65663b0d5dfa1600
+  zh: 55b2121ae6059425
+/deepseek-ai-dsh-output-continuation/use-this-package:
+  en: a56abe3035048a8b
+  zh: 8bf60984506f16c0
+/deepseek-ai-dsh-output-continuation/understand-the-implementation:
+  en: a994c67c7e7fb093
+  zh: 386eafe30a153344
+/deepseek-ai-dsh-output-continuation/further-exploration:
+  en: 570b00a71024a0ca
+  zh: 1cc73ebc6603aa49
+/deepseek-ai-dsh-output-continuation/model-experience:
+  en: 215e7ba838619b7b
+  zh: a311da3843709f90
+/deepseek-ai-dsh-output-continuation/model-experience/automatic-continuation-input:
+  en: d42061b3a4c24a74
+  zh: 30dbda42761fd1d6
+/deepseek-ai-dsh-output-continuation/model-experience/automatic-continuation-input/what-the-model-sees:
+  en: a93d374e078465b9
+  zh: 2d88880897c226a3
+/deepseek-ai-dsh-output-continuation/model-experience/automatic-continuation-input/what-the-model-sees/continuation-notice:
+  en: 27471fb5db191e96
+  zh: 2dcf72d01ae6a6a8
+/deepseek-ai-dsh-output-continuation/model-experience/automatic-continuation-input/what-the-model-sees/final-attempt-text:
+  en: 4d3b5ba5e0dfc330
+  zh: 2551e46f115a548b
+/deepseek-ai-dsh-output-continuation/model-experience/automatic-continuation-input/token-effect:
+  en: d0432cd6f452aa63
+  zh: a8a59e29969d3a44
+/deepseek-ai-dsh-output-continuation/model-experience/automatic-continuation-input/kv-cache-effect:
+  en: f277ad434c853e3d
+  zh: a72ccb5f60ef469b
+/deepseek-ai-dsh-output-continuation/model-experience/duplicate-call-denial:
+  en: 5c89f54bd5a832fd
+  zh: f7f842cd2717128e
+/deepseek-ai-dsh-output-continuation/model-experience/duplicate-call-denial/what-the-model-sees:
+  en: bbe3f487888fa803
+  zh: 51b0d8e6d5bc8795
+/deepseek-ai-dsh-output-continuation/model-experience/duplicate-call-denial/what-the-model-sees/denial-result:
+  en: b42ee33427ac7522
+  zh: 52ade34be39bede9
+/deepseek-ai-dsh-output-continuation/model-experience/duplicate-call-denial/token-effect:
+  en: 8aa2651dc0c90f35
+  zh: 85ad5cfe41af2066
+/deepseek-ai-dsh-output-continuation/model-experience/duplicate-call-denial/kv-cache-effect:
+  en: 9ca30658807e899f
+  zh: 8b62660c8e2f8fce
+/deepseek-ai-dsh-output-continuation/known-limitations-and-deferred-work:
+  en: 223b78040ab32d36
+  zh: 6a77ed3bfef7cd06
+/deepseek-ai-dsh-output-continuation/known-limitations-and-deferred-work/dev-note:
+  en: 0a1253c6f7b5e8b9
+  zh: 9f56528562c7c914

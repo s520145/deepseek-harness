@@ -116,6 +116,12 @@ export type PreStepDecision =
     messages: UserMessage[]
     /** Start a distinct model-message series before this step's admitted messages. */
     startsRequestSeries?: true
+    /**
+     * Acknowledge the latest truncated Assistant in this turn. An admitted step
+     * that succeeds without max-tokens clears that sticky outcome; stale or
+     * foreign sequences leave it unchanged. The original stream stays logged.
+     */
+    resumesAfterMaxTokens?: SessionSeq
   }
 
 /** Action returned by a listener that owns model-request recovery. */

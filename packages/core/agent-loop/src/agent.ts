@@ -49,7 +49,9 @@ type Phase =
   }
   | { kind: 'running'; abort: AbortController; turn: number; step: number; wakeRequested: boolean }
 
-type StepEndReason = Extract<TurnEndReason, { kind: 'completed' | 'max-tokens' }>
+type StepResult =
+  | { kind: 'completed' }
+  | { kind: 'max-tokens'; assistantSeq: SessionSeq }
 
 type PreparedStep =
   | { kind: 'reject' }
@@ -57,6 +59,7 @@ type PreparedStep =
     kind: 'enter'
     messages: UserMessage[]
     startsRequestSeries?: true
+    resumesAfterMaxTokens?: SessionSeq
     assembly: PromptAssembly
   }
 
@@ -310,6 +313,7 @@ export class ReactLoopAgent implements Agent {
     }
     phase.turn = turn
     let turnEnds: TurnEndReason | null = null
+    let maxTokensAssistantSeq: SessionSeq | undefined
     let target: InboxTarget = 'next-turn'
     try {
       while (true) {
@@ -335,12 +339,16 @@ export class ReactLoopAgent implements Agent {
           if (session === this.session) toolRecovery.observe(event)
         })
         try {
-          // max-tokens is sticky: once any step hits the ceiling, later steps
-          // that complete normally must not downgrade the turn outcome.
+          const resumesAfterMaxTokens = maxTokensAssistantSeq !== undefined
+            && decision.resumesAfterMaxTokens === maxTokensAssistantSeq
           const stepEnd = await this.step(decision)
-          // max-tokens stays sticky: a later completed step must not
-          // downgrade the turn outcome.
-          if (turnEnds === null || turnEnds.kind !== 'max-tokens') turnEnds = stepEnd
+          if (stepEnd?.kind === 'max-tokens') {
+            maxTokensAssistantSeq = stepEnd.assistantSeq
+            turnEnds = { kind: 'max-tokens' }
+          } else if (turnEnds?.kind !== 'max-tokens' || resumesAfterMaxTokens) {
+            maxTokensAssistantSeq = undefined
+            turnEnds = stepEnd
+          }
         } catch (error: unknown) {
           try {
             for (const event of toolRecovery.results()) {
@@ -397,7 +405,7 @@ export class ReactLoopAgent implements Agent {
     return true
   }
 
-  private async step(decision: Extract<PreparedStep, { kind: 'enter' }>): Promise<StepEndReason | null> {
+  private async step(decision: Extract<PreparedStep, { kind: 'enter' }>): Promise<StepResult | null> {
     /* v8 ignore next -- private callers establish the running phase before executing a step */
     if (this.phase.kind !== 'running') throw new Error(`agent "${this.id}": step outside running phase`)
     const { turn, step, abort: { signal } } = this.phase
@@ -534,17 +542,25 @@ export class ReactLoopAgent implements Agent {
             ...live.replayState !== undefined ? { replayState: live.replayState } : {},
           },
         })
+        let assistantSeq: SessionSeq | undefined
         live.settle(
           'assistant/message',
-          () => this.session.append('assistant/message', {
-            turn,
-            step,
-            message,
-            ...live.usage === undefined ? {} : { usage: live.usage },
-            stream: live.stream,
-          }, { surfaceOp: 'append' }).seq,
+          () => {
+            const event = this.session.append('assistant/message', {
+              turn,
+              step,
+              message,
+              ...live.usage === undefined ? {} : { usage: live.usage },
+              stream: live.stream,
+            }, { surfaceOp: 'append' })
+            assistantSeq = event.seq
+            return event.seq
+          },
         )
-        if (finish.kind === 'max-tokens') return { kind: 'max-tokens' }
+        if (finish.kind === 'max-tokens') {
+          if (assistantSeq === undefined) throw new Error('Assistant settlement completed without a message sequence')
+          return { kind: 'max-tokens', assistantSeq }
+        }
 
         const toolCalls = message.content.filter(block => block.type === 'tool-call')
         if (toolCalls.length === 0) return { kind: 'completed' }

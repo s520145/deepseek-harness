@@ -1,0 +1,7 @@
+version: 1
+scenario: output-continuation
+profile: sdk
+composition: default
+recording: authored
+header:
+  class: default

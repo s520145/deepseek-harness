@@ -151,6 +151,11 @@ RECOVERY_SNAPSHOT_DIRECTORY = (
     Path(__file__).resolve().parent / "snapshots" / "python-sdk-single-exe" / "scheduler-recovery"
 )
 RECOVERY_SNAPSHOT_FILENAMES = ("result.json", "requests.json", "session.v4.jsonl")
+OUTPUT_CONTINUATION_PROMPT = "Continue the long task safely after output limits."
+OUTPUT_CONTINUATION_TEXT = "OUTPUT_CONTINUATION_OK"
+OUTPUT_CONTINUATION_SESSION_ID = "sdk-output-continuation-session"
+OUTPUT_CONTINUATION_SNAPSHOT_DIRECTORY = ADVANCED_SNAPSHOT_ROOT / "output-continuation"
+OUTPUT_CONTINUATION_SNAPSHOT_FILENAMES = ("result.json", "requests.json", "session.v4.jsonl")
 MCP_SERVER_SCRIPT = """\
 import json
 import os
@@ -337,6 +342,21 @@ def completion_chunks(body: dict[str, object]) -> list[dict[str, object]]:
     latest = next(message for message in reversed(messages) if message.get("role") != "system")
     if not isinstance(latest, dict):
         raise AssertionError(f"model request has an invalid latest message: {body}")
+
+    if any(OUTPUT_CONTINUATION_PROMPT in message_text(message.get("content")) for message in messages):
+        stages = sum(
+            message.get("role") == "assistant"
+            and "CONTINUATION_STAGE_" in message_text(message.get("content"))
+            for message in messages
+        )
+        if stages >= 2:
+            return text_chunks(OUTPUT_CONTINUATION_TEXT)
+        chunks = text_chunks(f"CONTINUATION_STAGE_{stages + 1}")
+        chunks[-2] = {
+            "type": "message_delta", "delta": {"stop_reason": "max_tokens"},
+            "usage": {"output_tokens": 3},
+        }
+        return chunks
 
     recovery_prompt = next((
         block.get("text")
@@ -803,7 +823,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--scenario",
-        choices=("all", "sdk-default", "sdk-custom", "sdk-minimal", "sdk-minimal-in-history", "sdk-dynamic-tools", "sdk-fs-search", "sdk-spawn-node", "sdk-mcp", "sdk-snapshot", "sdk-recovery", "sdk-restart", "sdk-profile-plugin", "sdk-office", "sdk-authoring", "sdk-live", "runner", "direct"),
+        choices=("all", "sdk-default", "sdk-custom", "sdk-minimal", "sdk-minimal-in-history", "sdk-dynamic-tools", "sdk-fs-search", "sdk-spawn-node", "sdk-mcp", "sdk-snapshot", "sdk-recovery", "sdk-output-continuation", "sdk-restart", "sdk-profile-plugin", "sdk-office", "sdk-authoring", "sdk-live", "runner", "direct"),
         default="all",
     )
     parser.add_argument("--exe", type=Path)
@@ -822,10 +842,10 @@ def main() -> None:
         parser.error("--scenario sdk-profile-plugin requires --installed-wheel")
     if args.installed_wheel:
         args.exe = assert_installed_wheel_environment()
-    if args.scenario in {"all", "sdk-custom", "sdk-minimal", "sdk-minimal-in-history", "sdk-dynamic-tools", "sdk-fs-search", "sdk-spawn-node", "sdk-snapshot", "sdk-recovery", "sdk-restart", "sdk-office", "sdk-authoring", "runner", "direct"} and args.exe is None:
-        parser.error("--exe is required for custom, minimal, dynamic-tools, fs-search, spawn-node, snapshot, recovery, restart, office, runner, and direct scenarios")
-    if args.update_snapshots and args.scenario not in {"all", "sdk-minimal", "sdk-minimal-in-history", "sdk-dynamic-tools", "sdk-snapshot", "sdk-recovery", "sdk-restart", "sdk-authoring"}:
-        parser.error("--update-snapshots requires --scenario sdk-minimal, sdk-minimal-in-history, sdk-dynamic-tools, sdk-snapshot, sdk-recovery, sdk-restart, sdk-authoring, or all")
+    if args.scenario in {"all", "sdk-custom", "sdk-minimal", "sdk-minimal-in-history", "sdk-dynamic-tools", "sdk-fs-search", "sdk-spawn-node", "sdk-snapshot", "sdk-recovery", "sdk-output-continuation", "sdk-restart", "sdk-office", "sdk-authoring", "runner", "direct"} and args.exe is None:
+        parser.error("--exe is required for custom, minimal, dynamic-tools, fs-search, spawn-node, snapshot, recovery, output-continuation, restart, office, runner, and direct scenarios")
+    if args.update_snapshots and args.scenario not in {"all", "sdk-minimal", "sdk-minimal-in-history", "sdk-dynamic-tools", "sdk-snapshot", "sdk-recovery", "sdk-output-continuation", "sdk-restart", "sdk-authoring"}:
+        parser.error("--update-snapshots requires --scenario sdk-minimal, sdk-minimal-in-history, sdk-dynamic-tools, sdk-snapshot, sdk-recovery, sdk-output-continuation, sdk-restart, sdk-authoring, or all")
     if args.exe is not None and not args.exe.is_file():
         parser.error(f"runtime executable does not exist: {args.exe}")
 
@@ -880,6 +900,9 @@ def main() -> None:
         if args.scenario in {"all", "sdk-snapshot", "sdk-recovery"}:
             assert args.exe is not None
             smoke_sdk_scheduler_recovery(model.url, args.exe.resolve(), args.update_snapshots)
+        if args.scenario in {"all", "sdk-snapshot", "sdk-output-continuation"}:
+            assert args.exe is not None
+            smoke_sdk_output_continuation(model.url, args.exe.resolve(), args.update_snapshots)
         if args.scenario in {"all", "sdk-restart"}:
             assert args.exe is not None
             smoke_sdk_restart_snapshot(model.url, args.exe.resolve(), args.update_snapshots)
@@ -1931,6 +1954,76 @@ def smoke_sdk_scheduler_recovery(base_url: str, executable: Path, update_snapsho
         }
         compare_snapshot_files(
             files, update_snapshots, RECOVERY_SNAPSHOT_DIRECTORY, RECOVERY_SNAPSHOT_FILENAMES,
+        )
+
+
+def smoke_sdk_output_continuation(base_url: str, executable: Path, update_snapshots: bool) -> None:
+    """Project two automatic output-limit recoveries through the Python SDK."""
+    from deepseek_harness import DeepSeekHarness
+
+    first_request = len(MockModelHandler.requests)
+    with tempfile.TemporaryDirectory(prefix="dsh-sdk-output-continuation-") as temporary:
+        root = Path(temporary).resolve()
+        sessions = root / "home" / "sessions"
+        base_patch = write_advanced_profile_patch(root, "base.patch.yml", sessions)
+        patch = write_profile_patch(root, "continuation.patch.yml", sessions, [
+            {"id": "output-continuation", "config": {"maxContinuations": 2}},
+            {"id": "session-title-llm", "disabled": True},
+            {"id": "session-log-deepseek", "config": {"enabled": False}},
+        ])
+        with DeepSeekHarness(
+            provider="deepseek-official", model="smoke-model", cwd=str(root),
+            dsh_bin=str(executable), dsh_home=str(root / "home"),
+            patches=(str(base_patch), str(patch)),
+            env={"DSH_PERMISSION_MODE": "danger-full-access", "DSH_TELEMETRY_DISABLED": "1"},
+            api_key="sk-keyless-smoke", base_url=base_url, request_timeout_seconds=60,
+        ) as harness:
+            result = harness.run(OUTPUT_CONTINUATION_PROMPT, session_id=OUTPUT_CONTINUATION_SESSION_ID)
+        if result.finish_reason != "completed" or result.final_response != OUTPUT_CONTINUATION_TEXT:
+            raise AssertionError(f"output continuation did not complete: {result.finish_reason}, {result.final_response}")
+        requests = MockModelHandler.requests[first_request:]
+        if len(requests) != 3:
+            raise AssertionError(f"output continuation expected three model requests, received {len(requests)}")
+        records = read_session_logs(sessions)[OUTPUT_CONTINUATION_SESSION_ID]
+        markers = [
+            record["data"]["source"] for record in records
+            if record.get("type") == "user/message"
+            and record["data"]["source"]["kind"] == "output-continuation"
+        ]
+        if [marker["attempt"] for marker in markers] != [1, 2]:
+            raise AssertionError(f"output continuation lost bounded receipts: {markers}")
+        if [record["data"]["reason"]["kind"] for record in records if record.get("type") == "turn/end"] != ["completed"]:
+            raise AssertionError("recovered output limits left the turn marked as truncated")
+        assistants = [record for record in records if record.get("type") == "assistant/message"]
+        finishes = [
+            member["chunk"]["reason"]["kind"] for record in assistants
+            for member in record["data"]["stream"]
+            if member["type"] == "chunk" and member["chunk"]["type"] == "finish"
+        ]
+        if finishes != ["max-tokens", "max-tokens", "stop"]:
+            raise AssertionError(f"output continuation erased truncation history: {finishes}")
+        replacements = [
+            *snapshot_directory_replacements(root, "{{cwd}}"),
+            (OUTPUT_CONTINUATION_SESSION_ID, "{{parent}}"),
+        ]
+        result_value = {
+            "session_id": result.session_id,
+            "final_response": result.final_response,
+            "finish_reason": result.finish_reason,
+            "eventTypes": [event.get("type") for event in result.events],
+            "notificationMethods": [notification.method for notification in result.notifications],
+        }
+        request_value = [{"model": request.get("model"), "messages": restart_request_messages(request)} for request in requests]
+        content = render_jsonl(project_session_snapshot([
+            normalize_snapshot_value(record, replacements) for record in records
+        ]))
+        files = {
+            "result.json": json.dumps(normalize_snapshot_value(result_value, replacements), indent=2) + "\n",
+            "requests.json": json.dumps(normalize_snapshot_value(request_value, replacements), indent=2) + "\n",
+            snapshot_session_filename(0, session_header_version(content, "output continuation")): content,
+        }
+        compare_snapshot_files(
+            files, update_snapshots, OUTPUT_CONTINUATION_SNAPSHOT_DIRECTORY, OUTPUT_CONTINUATION_SNAPSHOT_FILENAMES,
         )
 
 

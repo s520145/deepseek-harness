@@ -1,0 +1,110 @@
+[
+  {
+    "model": "smoke-model",
+    "messages": [
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "text",
+            "text": "Continue the long task safely after output limits."
+          },
+          {
+            "type": "text",
+            "text": "Current runtime context. This snapshot supersedes earlier runtime-context snapshots.\n\nCurrent working directory: \"{{cwd}}\".\n\nCurrent DSH file policy: danger-full-access. The DSH file sandbox does not restrict file modifications by available operations.\n\nApproval prompts are disabled in this session: actions that require approval are rejected automatically \u2014 do not request sandbox escalation (do not set `sandbox_permissions`)."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "model": "smoke-model",
+    "messages": [
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "text",
+            "text": "Continue the long task safely after output limits."
+          },
+          {
+            "type": "text",
+            "text": "Current runtime context. This snapshot supersedes earlier runtime-context snapshots.\n\nCurrent working directory: \"{{cwd}}\".\n\nCurrent DSH file policy: danger-full-access. The DSH file sandbox does not restrict file modifications by available operations.\n\nApproval prompts are disabled in this session: actions that require approval are rejected automatically \u2014 do not request sandbox escalation (do not set `sandbox_permissions`)."
+          }
+        ]
+      },
+      {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "text",
+            "text": "CONTINUATION_STAGE_1"
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "text",
+            "text": "Your previous response reached its output limit. Continue the unfinished task from the recorded history. This is automatic continuation 1 of 2 for this turn.\nKeep completed work and recorded tool results; do not repeat tool calls that already ran or may have run. Tool calls in the truncated response were not executed; issue any still-needed calls again with complete arguments. Do not reconstruct or execute partial tool arguments.\nContinue concisely and finish when the task is complete.\nExact repeated tool calls are blocked during automatic continuation, including calls whose earlier outcome is uncertain. Different arguments do not guarantee that a repeated side effect is safe."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "model": "smoke-model",
+    "messages": [
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "text",
+            "text": "Continue the long task safely after output limits."
+          },
+          {
+            "type": "text",
+            "text": "Current runtime context. This snapshot supersedes earlier runtime-context snapshots.\n\nCurrent working directory: \"{{cwd}}\".\n\nCurrent DSH file policy: danger-full-access. The DSH file sandbox does not restrict file modifications by available operations.\n\nApproval prompts are disabled in this session: actions that require approval are rejected automatically \u2014 do not request sandbox escalation (do not set `sandbox_permissions`)."
+          }
+        ]
+      },
+      {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "text",
+            "text": "CONTINUATION_STAGE_1"
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "text",
+            "text": "Your previous response reached its output limit. Continue the unfinished task from the recorded history. This is automatic continuation 1 of 2 for this turn.\nKeep completed work and recorded tool results; do not repeat tool calls that already ran or may have run. Tool calls in the truncated response were not executed; issue any still-needed calls again with complete arguments. Do not reconstruct or execute partial tool arguments.\nContinue concisely and finish when the task is complete.\nExact repeated tool calls are blocked during automatic continuation, including calls whose earlier outcome is uncertain. Different arguments do not guarantee that a repeated side effect is safe."
+          }
+        ]
+      },
+      {
+        "role": "assistant",
+        "content": [
+          {
+            "type": "text",
+            "text": "CONTINUATION_STAGE_2"
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "text",
+            "text": "Your previous response reached its output limit. Continue the unfinished task from the recorded history. This is automatic continuation 2 of 2 for this turn.\nKeep completed work and recorded tool results; do not repeat tool calls that already ran or may have run. Tool calls in the truncated response were not executed; issue any still-needed calls again with complete arguments. Do not reconstruct or execute partial tool arguments.\nThis is the last automatic continuation. Finish concisely if possible; otherwise explain the remaining work and ask the user to continue.\nExact repeated tool calls are blocked during automatic continuation, including calls whose earlier outcome is uncertain. Different arguments do not guarantee that a repeated side effect is safe."
+          }
+        ]
+      }
+    ]
+  }
+]

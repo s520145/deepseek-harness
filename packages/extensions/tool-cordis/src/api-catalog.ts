@@ -6487,7 +6487,7 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'PreStepDecision',
-    declaration: 'export type PreStepDecision = {\n    kind: \'reject\';\n} | {\n    kind: \'enter\';\n    messages: UserMessage[];\n    startsRequestSeries?: true;\n};',
+    declaration: 'export type PreStepDecision = {\n    kind: \'reject\';\n} | {\n    kind: \'enter\';\n    messages: UserMessage[];\n    startsRequestSeries?: true;\n    resumesAfterMaxTokens?: SessionSeq;\n};',
   },
   {
     name: 'PreToolDecision',
